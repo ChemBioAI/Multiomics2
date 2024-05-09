@@ -1,0 +1,89 @@
+# load the count file
+
+count<-read.csv("count.csv",header = T,sep = ",",row.names = 1,)
+
+head(count)
+
+metadata<-read.csv("meta.csv",header = T,row.names = 1,sep = ",")
+
+metadata$Geneid <- row.names(metadata)
+
+metadata <- metadata[match(colnames(count), metadata$Geneid), ]
+head(metadata)
+
+#making sure the row names in metadata matches to column names in countfile
+all(colnames(count)%in%rownames(metadata))
+
+# are they in same order
+all(colnames(count)==rownames(metadata))
+
+#step2 : construct a Deseq2 dataset object
+
+library(tidyr)
+
+f=count%>% drop_na()
+
+is.data.frame(f)
+
+dim(metadata)
+
+g <- as.matrix(f)
+
+dim(g)
+
+library(DESeq2)
+
+ddsMat<-DESeqDataSetFromMatrix(countData = g,
+                               colData = metadata,
+                               design = ~condition)
+
+ddsMat$condition <- relevel(ddsMat$condition, ref = "Normal")
+
+ddsMat <- DESeq(ddsMat)
+
+res <- results(ddsMat)
+
+results <- results(ddsMat, pAdjustMethod = "fdr", alpha = 0.05)
+
+summary(results)
+
+mcols(results, use.names = T)
+
+ddsMat_rlog <- rlog(ddsMat, blind = FALSE)
+
+results_sig <- subset(results, padj < 0.05)
+
+head(results_sig)
+
+pvalue = results_sig[which(results_sig[,5]<0.05), ]
+pvalue
+
+upregulated = pvalue[which(pvalue[,2]>0), ]
+upregulated
+
+downregulated = pvalue[which(pvalue[,2]<0), ]
+downregulated
+
+write.table(upregulated, file = "newupreg.xls", sep = "\t", col.names = NA)
+write.table(downregulated, file = "newdownreg.xls", sep = "\t", col.names = NA)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
